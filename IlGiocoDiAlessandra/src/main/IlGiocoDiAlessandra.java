@@ -29,6 +29,7 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
       
 
     public IlGiocoDiAlessandra() {
+    	
         setFocusable(true);
         setPreferredSize(new Dimension(1200, 700));
        // setBackground(Color.BLACK);
@@ -47,6 +48,7 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
         score = 0;
         lives = 3;
         audioPlayer = new AudioPlayer("/resources/audio/suono.wav");
+        audioPlayer.setVolume(-60.0f);
         audioPlayer.playLoop(); // Avvia la riproduzione in loop
 
         timer = new Timer(20, this);
@@ -54,9 +56,24 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
 
         addKeyListener(new KeyAdapter() {
             @Override
-            public void keyPressed(KeyEvent e) {
+            public void keyPressed(KeyEvent e)
+            {
                 player.startMoving(e);  // Usa startMoving per attivare il movimento
+                switch (e.getKeyCode()) {
+                case KeyEvent.VK_1 -> {
+                    // Abbassa il volume di 5 decibel
+                    float currentVolume = audioPlayer.getVolume();
+                    audioPlayer.setVolume(currentVolume - 5.0f);
+                }
+                case KeyEvent.VK_2 -> {
+                    // Alza il volume di 5 decibel
+                    float currentVolume = audioPlayer.getVolume();
+                    audioPlayer.setVolume(currentVolume + 5.0f);
+                }
             }
+        }
+
+            
 
             @Override
             public void keyReleased(KeyEvent e) {
@@ -99,26 +116,29 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
     
     public class AudioPlayer {
         private Clip clip;
-
+        private FloatControl volumeControl;
         public AudioPlayer(String filePath) {
             try {
                 // Carica il file audio usando getResource
                 AudioInputStream audioStream = AudioSystem.getAudioInputStream(
                     getClass().getResource(filePath)
-                );
-                if (audioStream == null) {
-                    throw new IOException("File audio non trovato: " + filePath);
-                }
-                clip = AudioSystem.getClip();
+                );         clip = AudioSystem.getClip();
                 clip.open(audioStream);
-            } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+
+                // Ottieni il controllo del volume
+                if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                    volumeControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                } else {
+                    System.err.println("Controllo del volume non supportato.");
+                }
+            } catch (Exception e) {
                 System.err.println("Errore nel caricamento del file audio: " + e.getMessage());
             }
         }
 
         public void playLoop() {
             if (clip != null) {
-                clip.loop(Clip.LOOP_CONTINUOUSLY); // Ripeti il file audio in loop
+                clip.loop(Clip.LOOP_CONTINUOUSLY);
                 clip.start();
             }
         }
@@ -127,6 +147,23 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
             if (clip != null && clip.isRunning()) {
                 clip.stop();
             }
+        }
+
+        public void setVolume(float decibels) {
+            if (volumeControl != null) {
+                float min = volumeControl.getMinimum();
+                float max = volumeControl.getMaximum();
+                volumeControl.setValue(Math.max(min, Math.min(max, decibels)));
+            } else {
+                System.err.println("Impossibile impostare il volume: controllo non disponibile.");
+            }
+        }
+
+        public float getVolume() {
+            if (volumeControl != null) {
+                return volumeControl.getValue();
+            }
+            return 0.0f; // Volume predefinito se il controllo non è disponibile
         }
     }
     @Override
@@ -333,7 +370,7 @@ class Player {
 
 class Laser {
     private int x, y;
-    private static final int WIDTH = 4, HEIGHT = 8;
+    private static final int WIDTH = 4, HEIGHT = 4;
     private static final int SPEED = 10;
     private double angle;  // Angolo di sparo
     private float pulse;    // Variabile per controllare il "pulsare"
