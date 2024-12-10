@@ -24,7 +24,7 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
     private Image backgroundImage;
 
     
-       
+    private boolean isPaused = false;
         
       
 
@@ -45,6 +45,7 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
         enemies = new ArrayList<>();
         items = new ArrayList<>();
         gameOver = false;
+        
         score = 0;
         lives = 3;
         audioPlayer = new AudioPlayer("/resources/audio/suono.wav");
@@ -56,28 +57,30 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
 
         addKeyListener(new KeyAdapter() {
             @Override
-            public void keyPressed(KeyEvent e)
-            {
-                player.startMoving(e);  // Usa startMoving per attivare il movimento
+            public void keyPressed(KeyEvent e) {
+                player.startMoving(e);
                 switch (e.getKeyCode()) {
-                case KeyEvent.VK_1 -> {
-                    // Abbassa il volume di 5 decibel
-                    float currentVolume = audioPlayer.getVolume();
-                    audioPlayer.setVolume(currentVolume - 5.0f);
-                }
-                case KeyEvent.VK_2 -> {
-                    // Alza il volume di 5 decibel
-                    float currentVolume = audioPlayer.getVolume();
-                    audioPlayer.setVolume(currentVolume + 5.0f);
+                    case KeyEvent.VK_1 -> {
+                        // Abbassa il volume di 5 decibel
+                        float currentVolume = audioPlayer.getVolume();
+                        audioPlayer.setVolume(currentVolume - 5.0f);
+                    }
+                    case KeyEvent.VK_2 -> {
+                        // Alza il volume di 5 decibel
+                        float currentVolume = audioPlayer.getVolume();
+                        audioPlayer.setVolume(currentVolume + 5.0f);
+                    }
+                    case KeyEvent.VK_P -> {
+                        // Inverti lo stato di pausa
+                        isPaused = !isPaused;
+                        repaint(); 
+                    }
                 }
             }
-        }
-
-            
 
             @Override
             public void keyReleased(KeyEvent e) {
-                player.stopMoving(e);  // Usa stopMoving per fermare il movimento
+                player.stopMoving(e);
             }
         });
 
@@ -169,39 +172,44 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+
+        // Disegna lo sfondo
         if (backgroundImage != null) {
             g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
         } else {
             System.err.println("Background image è null");
         }
-        if (gameOver) {
-            g.setColor(Color.RED);
-            g.setFont(new Font("Arial", Font.BOLD, 40));
-            g.drawString("Game Over! Punteggio: " + score, 200, 300);
-            return;
+
+        // Disegna gli elementi di gioco solo se non in pausa
+        if (!isPaused) {
+            player.draw(g);
+
+            for (Laser laser : lasers) {
+                laser.draw(g);
+            }
+
+            for (Enemy enemy : enemies) {
+                enemy.draw(g);
+            }
+
+            for (Item item : items) {
+                item.draw(g);
+            }
+
+            g.setColor(Color.PINK);
+            g.setFont(new Font("Arial", Font.BOLD, 20));
+            g.drawString("Vite: " + lives + " | Punti: " + score, 10, 20);
         }
 
-        player.draw(g);
-
-        for (Laser laser : lasers) {
-            laser.draw(g);
-        }
-
-        for (Enemy enemy : enemies) {
-            enemy.draw(g);
-        }
-
-        for (Item item : items) {
-            item.draw(g);
-        }
-
-        g.setColor(Color.PINK);
-        g.setFont(new Font("Arial", Font.BOLD, 20));
-        g.drawString("Vite: " + lives + " | Punti: " + score, 10, 20);
+        // Disegna la schermata di pausa se necessario
+        render(g);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
+        if (isPaused) {
+            return; // Blocca l'aggiornamento se il gioco è in pausa
+        }
         if (!gameOver) {
             player.update();
 
@@ -263,7 +271,9 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args)
+    {
+    	
         JFrame frame = new JFrame("Il Gioco di Alessandra");
         IlGiocoDiAlessandra game = new IlGiocoDiAlessandra();
 
@@ -272,7 +282,44 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+        
     }
+    public void gameLoop() {
+        while (true) {
+            update(); // Aggiorna lo stato del gioco
+            repaint(); // Chiede al sistema di richiamare paintComponent
+            try {
+                Thread.sleep(16); // Mantieni 60 FPS
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    public void update() {
+        if (!isPaused) {
+            // Aggiorna lo stato del gioco (giocatore, nemici, etc.)
+            player.update();
+        }
+    }
+
+    public void render(Graphics g){
+    	 if (isPaused) {
+    	        Graphics2D g2d = (Graphics2D) g;
+
+    	        // Sfondo semi-trasparente
+    	        g2d.setColor(new Color(0, 0, 0, 150)); // Nero semi-trasparente
+    	        g2d.fillRect(0, 0, getWidth(), getHeight());
+
+    	        // Messaggio di pausa
+    	        g2d.setColor(Color.WHITE);
+    	        g2d.setFont(new Font("Arial", Font.BOLD, 50));
+    	        FontMetrics metrics = g2d.getFontMetrics();
+    	        String pauseMessage = "PAUSA";
+    	        int x = (getWidth() - metrics.stringWidth(pauseMessage)) / 2;
+    	        int y = getHeight() / 2;
+    	        g2d.drawString(pauseMessage, x, y);
+    	    }
+    	}
 
 	public AudioPlayer getAudioPlayer() {
 		return audioPlayer;
@@ -336,6 +383,7 @@ class Player {
         y = Math.max(0, Math.min(700 - SIZE, y));
     }
 
+    
     public void draw(Graphics g) {
         if (playerImage != null) {
             g.drawImage(playerImage, x, y, null);
@@ -435,10 +483,13 @@ class Enemy {
     private int x, y;
     private static final int SIZE = 40;
     private static final int SPEED = 2;
-
+    private Image EnemyImage;
+    private boolean isImageLoaded = false;
     public Enemy() {
+    	
         this.x = new Random().nextInt(1200 - SIZE);
         this.y = new Random().nextInt(700 - SIZE);
+        loadEnemyImage();
     }
 
     public void update(Player player) {
@@ -446,10 +497,29 @@ class Enemy {
         y += Integer.compare(player.getY(), y) * SPEED;
     }
 
-    public void draw(Graphics g) {
-        g.setColor(Color.ORANGE);
-        g.fillRect(x, y, SIZE, SIZE);
+    public void loadEnemyImage(){
+    	try {
+            EnemyImage = new ImageIcon(getClass().getResource("/resources/images/bober.png")).getImage();
+            isImageLoaded = true;
+            System.out.println("Immagine caricata correttamente! bober");
+        } catch (Exception e) {
+            isImageLoaded = false;
+            System.err.println("Errore durante il caricamento dell'immagine: " + e.getMessage());
+        }
     }
+
+    // Metodo per disegnare l'immagine
+    public void draw(Graphics g) {
+        if (isImageLoaded && EnemyImage != null) {
+            // Disegna l'immagine se è stata caricata correttamente
+            g.drawImage(EnemyImage, x, y, SIZE, SIZE, null);
+        } else {
+            // Disegna un rettangolo arancione come fallback
+            g.setColor(Color.ORANGE);
+            g.fillRect(x, y, SIZE, SIZE);
+        }
+    }
+    
 
     public boolean intersects(Player player) {
         return getBounds().intersects(player.getBounds());
@@ -462,6 +532,7 @@ class Enemy {
     public Rectangle getBounds() {
         return new Rectangle(x, y, SIZE, SIZE);
     }
+    
 }
 
 enum ItemType {
@@ -470,25 +541,31 @@ enum ItemType {
 
 class Item {
     private int x, y;
-    private static final int SIZE = 30;
+    private static final int SIZE = 40;
     private ItemType type;
     private static Image coinImage;
     private static Image vitaImage;
-
+    private static Image GUNImage;
     // Blocco statico per caricare le immagini una sola volta
     static {
         try {
-            coinImage = new ImageIcon(Item.class.getResource("/resources/images/giorgio.png")).getImage();
+            coinImage = new ImageIcon(Item.class.getResource("/resources/images/coin.png")).getImage();
             System.out.println("Immagine 'coin' caricata correttamente!");
+        } catch (Exception e) {
+            System.err.println("Errore durante il caricamento dell'immagine 'coin': " + e.getMessage());
+        }
+        try {
+            GUNImage = new ImageIcon(Item.class.getResource("/resources/images/vita.png")).getImage();
+            System.out.println("Immagine 'gun' caricata correttamente!");
         } catch (Exception e) {
             System.err.println("Errore durante il caricamento dell'immagine 'coin': " + e.getMessage());
         }
 
         try {
-            vitaImage = new ImageIcon(Item.class.getResource("/resources/images/vita.png")).getImage();
+            vitaImage = new ImageIcon(Item.class.getResource("/resources/images/giorgio.png")).getImage();
             System.out.println("Immagine 'vita' caricata correttamente!");
         } catch (Exception e) {
-            System.err.println("Errore durante il caricamento dell'immagine 'vita': " + e.getMessage());
+            System.err.println("Errore durante il caricamento dell'immagine 'giorgio': " + e.getMessage());
         }
     }
 
@@ -508,7 +585,7 @@ class Item {
 
     public void draw(Graphics g) {
     	 Graphics2D g2d = (Graphics2D) g;
-    	    int newSize = 50; // Dimensione desiderata (sia larghezza che altezza)
+    	    int newSize = 30; // Dimensione desiderata (sia larghezza che altezza)
         switch (type) {
             case COIN -> {
                 if (coinImage != null) {
@@ -520,16 +597,20 @@ class Item {
             }
             case HEART -> {
                 if (vitaImage != null) {
-                    g.drawImage(vitaImage, x, y, SIZE, SIZE, null);
+                    g.drawImage(vitaImage, x, y, newSize, newSize, null);
                 } else {
                     g.setColor(Color.PINK);
                     g.fillRect(x, y, SIZE, SIZE);
                 }
             }
+            
             case GUN -> {
+            	 if (GUNImage != null) {
+            		 g.drawImage(GUNImage, x, y, newSize, newSize, null);
+                 } else {
                 g.setColor(Color.GREEN);
                 g.fillRect(x, y, SIZE, SIZE);
-            }
+            }}
         }
     }
 
@@ -549,4 +630,3 @@ class Item {
 
 
 // 
-
