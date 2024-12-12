@@ -250,6 +250,9 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
             while (itemIterator.hasNext()) {
                 Item item = itemIterator.next();
                 if (item.intersects(player)) {
+                	 
+                	    item.playSound(); // Riproduce il suono
+                	    // Altri effetti, come incrementare i punti o rimuovere l'oggetto
                     switch (item.getType()) {
                         case HEART -> lives++;
                         case COIN -> score += 2;
@@ -481,10 +484,11 @@ class Laser {
 
 class Enemy {
     private int x, y;
-    private static final int SIZE = 40;
+    private static final int SIZE = 50;
     private static final int SPEED = 2;
-    private Image EnemyImage;
+    private static Image EnemyImage; 
     private boolean isImageLoaded = false;
+    
     public Enemy() {
     	
         this.x = new Random().nextInt(1200 - SIZE);
@@ -499,6 +503,7 @@ class Enemy {
 
     public void loadEnemyImage(){
     	try {
+    		
             EnemyImage = new ImageIcon(getClass().getResource("/resources/images/bober.png")).getImage();
             isImageLoaded = true;
             System.out.println("Immagine caricata correttamente! bober");
@@ -544,9 +549,19 @@ class Item {
     private static final int SIZE = 40;
     private ItemType type;
     private static Image coinImage;
-    private static Image vitaImage;
+    private static Image giorgioImage;
     private static Image GUNImage;
-    // Blocco statico per caricare le immagini una sola volta
+    
+    private static final String coinSound = "/resources/audio/coin.wav";
+    private static final String[] giorgioSounds = {
+       //     "/resources/audio/miao1.wav",
+            "/resources/audio/miao2.wav",
+        //    "/resources/audio/coin3.wav",
+        //    "/resources/audio/coin4.wav"
+    };
+    private static final String gunSound = "/resources/audio/gun.wav";
+    
+    // Blocco statico per caricare le immagini 2una sola volta
     static {
         try {
             coinImage = new ImageIcon(Item.class.getResource("/resources/images/coin.png")).getImage();
@@ -562,7 +577,7 @@ class Item {
         }
 
         try {
-            vitaImage = new ImageIcon(Item.class.getResource("/resources/images/giorgio.png")).getImage();
+            giorgioImage = new ImageIcon(Item.class.getResource("/resources/images/giorgio.png")).getImage();
             System.out.println("Immagine 'vita' caricata correttamente!");
         } catch (Exception e) {
             System.err.println("Errore durante il caricamento dell'immagine 'giorgio': " + e.getMessage());
@@ -596,8 +611,8 @@ class Item {
                 }
             }
             case HEART -> {
-                if (vitaImage != null) {
-                    g.drawImage(vitaImage, x, y, newSize, newSize, null);
+                if (giorgioImage != null) {
+                    g.drawImage(giorgioImage, x, y, newSize, newSize, null);
                 } else {
                     g.setColor(Color.PINK);
                     g.fillRect(x, y, SIZE, SIZE);
@@ -625,7 +640,26 @@ class Item {
     public Rectangle getBounds() {
         return new Rectangle(x, y, SIZE, SIZE);
     }
+    // Metodo per riprodurre suoni alla raccolta
+    public void playSound() {
+        String soundPath = switch (type) {
+            case COIN -> coinSound;
+            case HEART -> giorgioSounds[new Random().nextInt(giorgioSounds.length)]; // Suono casuale per giorgio
+            case GUN -> gunSound;
+        };
+
+        try {
+            Clip clip = AudioSystem.getClip();
+            AudioInputStream ais = AudioSystem.getAudioInputStream(getClass().getResource(soundPath));
+            clip.open(ais);
+            clip.start();
+        } catch (Exception e) {
+            System.err.println("Errore durante la riproduzione del suono: " + e.getMessage());
+        }
+    }
 }
+
+
 
 
 
