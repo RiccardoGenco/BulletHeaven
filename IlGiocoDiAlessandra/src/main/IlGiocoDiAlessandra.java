@@ -12,7 +12,11 @@ import javax.sound.sampled.*;
 import java.io.IOException;
 
 public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
-    private Timer timer;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private Timer timer;
     private Player player;
     private ArrayList<Laser> lasers;
     private ArrayList<Enemy> enemies;
@@ -210,7 +214,8 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
         if (isPaused) {
             return; // Blocca l'aggiornamento se il gioco è in pausa
         }
-        if (!gameOver) {
+        if (!gameOver)
+        {
             player.update();
 
             Iterator<Laser> laserIterator = lasers.iterator();
@@ -232,6 +237,9 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
                     enemyIterator.remove();
                     if (lives <= 0) {
                         gameOver = true;
+                        
+                        // forse qui devo inserire la schermata di gameover
+                        
                         timer.stop();
                     }
                 }
