@@ -180,11 +180,33 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
         // Disegna lo sfondo
         if (backgroundImage != null) {
             g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
-        } else {
-            System.err.println("Background image è null");
         }
 
-        // Disegna gli elementi di gioco solo se non in pausa
+        if (gameOver) {
+            // Schermata di Game Over
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setColor(new Color(0, 0, 0, 200)); // Sfondo semi-trasparente
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+
+            g2d.setColor(Color.RED);
+            g2d.setFont(new Font("Arial", Font.BOLD, 50));
+            String message = "GAME OVER";
+            FontMetrics metrics = g2d.getFontMetrics();
+            int x = (getWidth() - metrics.stringWidth(message)) / 2;
+            int y = getHeight() / 2 - 50;
+            g2d.drawString(message, x, y);
+
+            // Dettagli sul tempo e nemici
+            g2d.setFont(new Font("Arial", Font.PLAIN, 30));
+            String stats = String.format("Tempo: %d secondi | Nemici sconfitti: %d", score, enemies.size());
+            int xStats = (getWidth() - metrics.stringWidth(stats)) / 2;
+            int yStats = y + 50;
+            g2d.drawString(stats, xStats, yStats);
+
+            return;
+        }
+
+        // Disegna gli elementi di gioco
         if (!isPaused) {
             player.draw(g);
 
@@ -205,10 +227,9 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
             g.drawString("Vite: " + lives + " | Punti: " + score, 10, 20);
         }
 
-        // Disegna la schermata di pausa se necessario
+        // Disegna la schermata di pausa
         render(g);
     }
-
     @Override
     public void actionPerformed(ActionEvent e) {
         if (isPaused) {
