@@ -14,13 +14,14 @@ import java.io.IOException;
 public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
 	private static final long serialVersionUID = 1L;
 	private Timer timer;
- private Player player;
+ public Player player;
  private ArrayList<Laser> lasers;
+ private int enemySpawnTimer = 0;  // Timer in secondi
  private ArrayList<Enemy> enemies;
  private ArrayList<Item> items;
  private boolean gameOver;
  private int score;
- private int lives;
+ public int lives;
  private AudioPlayer audioPlayer;
  private Image backgroundImage;
  private boolean isPaused = false;
@@ -30,7 +31,7 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
      setPreferredSize(new Dimension(1200, 700));
      setDoubleBuffered(true);
      
-         backgroundImage = new ImageIcon(getClass().getResource("/resources/images/erba.png")).getImage();
+         backgroundImage = new ImageIcon(getClass().getResource("/resources/images/mappa2.png")).getImage();
          System.out.println("Immagine di sfondo caricata correttamente!");
    
      player = new Player();
@@ -47,7 +48,8 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
      timer = new Timer(20, this);
      timer.start();
 
-     addKeyListener(new KeyAdapter() {
+     addKeyListener(new KeyAdapter() 
+     {
          @Override
          public void keyPressed(KeyEvent e) {
              player.startMoving(e);
@@ -69,7 +71,7 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
                  }
              }
          }
-
+       
          @Override
          public void keyReleased(KeyEvent e) {
              player.stopMoving(e);
@@ -253,16 +255,14 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
                  }
              }
 
-             for (int i = lasers.size() - 1; i >= 0; i--) {
-            	    Laser laser = lasers.get(i);
-            	    if (enemy.intersects(laser)) {
-            	        score++;
-            	        enemyIterator.remove(); // Rimuove il nemico dall'elenco
-            	        lasers.remove(i); // Rimuove il laser in sicurezza
-            	        break; // Esce dal ciclo poiché l'intersezione è avvenuta
-            	    }
-            	}
-
+             for (Laser laser : lasers) {
+                 if (enemy.intersects(laser)) {
+                     score++;
+                     enemyIterator.remove();
+                     lasers.remove(laser);
+                     break;
+                 }
+             }
          }
 
          Iterator<Item> itemIterator = items.iterator();
@@ -281,8 +281,18 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
              }
          }
 
-         if (new Random().nextInt(100) < 2) {
-             enemies.add(new Enemy());
+         // Aggiornamento timer di spawn nemico speciale
+         enemySpawnTimer++;
+
+         // Spawn nemico speciale ogni 30 secondi
+         if (enemySpawnTimer >= 1500) { // 1500 frame = 30 secondi (ogni frame è 20ms)
+             enemies.add(new SpecialEnemy()); // Aggiungi il nemico speciale
+             enemySpawnTimer = 0; // Reset del timer
+         } else {
+             // Spawn nemico normale con probabilità 2%
+             if (new Random().nextInt(100) < 2) {
+                 enemies.add(new Enemy());
+             }
          }
 
          if (new Random().nextInt(200) < 1) {
@@ -354,7 +364,7 @@ public class IlGiocoDiAlessandra extends JPanel implements ActionListener {
 
 class Player {
  private int x, y;
- private static final int SIZE = 50;
+ private static final int SIZE = 64;
  private static final int SPEED = 8;
  private int laserCount;
  private Image playerImage;
@@ -366,13 +376,14 @@ class Player {
      this.laserCount = 1;
     
      try {
-         playerImage = new ImageIcon(getClass().getResource("/resources/images/kuromi.png")).getImage();
+         playerImage = new ImageIcon(getClass().getResource("/resources/images/krmi.gif")).getImage();
          System.out.println("Immagine caricata correttamente!");
      } catch (Exception e) {
          System.err.println("Errore durante il caricamento dell'immagine: " + e.getMessage());
      }
  }
  private boolean movingUp, movingDown, movingLeft, movingRight;
+ 
 
  public void startMoving(KeyEvent e) {
      switch (e.getKeyCode()) {
@@ -436,11 +447,19 @@ class Player {
  public Rectangle getBounds() {
      return new Rectangle(x, y, SIZE, SIZE);
  }
+
+public void takeDamage(int i) {
+	// TODO Auto-generated method stub
+	
+}
+
+
+
 }
 
 class Laser {
  private int x, y;
- private static final int WIDTH = 4, HEIGHT = 4;
+ private static final int WIDTH = 3, HEIGHT = 3;
  private static final int SPEED = 10;
  private double angle;  // Angolo di sparo
  private float pulse;    // Variabile per controllare il "pulsare"
@@ -448,7 +467,7 @@ class Laser {
 
  public Laser(int x, int y, double angle) {
      this.x = x;
-     this.y = y;
+     this.y = y+30;
      this.angle = angle;
      this.pulse = 1.0f; // Iniziamo con un valore normale per il "pulsare"
  }
@@ -497,24 +516,40 @@ class Laser {
  public Rectangle getBounds() {
      return new Rectangle(x, y, WIDTH, HEIGHT);
  }
+
+ public boolean intersects(Player player) {
+     return getBounds().intersects(player.getBounds());
+ }
+ 
 }
 
 
 
 class Enemy {
- private int x, y;
+ protected int x, y;
  private static final int SIZE = 50;
  private static final int SPEED = 2;
  private static Image EnemyImage; 
  private boolean isImageLoaded = false;
- 
+ private int hp = 1;     
  public Enemy() {
  	
      this.x = new Random().nextInt(1200 - SIZE);
      this.y = new Random().nextInt(700 - SIZE);
      loadEnemyImage();
  }
+ public void takeDamage(int damage) {
+     hp -= damage;
+     if (hp <= 0) {
+         die(); // Il nemico è morto
+     }
+ }
 
+ // Metodo che gestisce la morte del nemico
+ private void die() {
+     // Logica di morte, ad esempio rimuovere il nemico dalla lista di nemici
+     System.out.println("Il nemico è morto!");
+ }
  public void update(Player player) {
      x += Integer.compare(player.getX(), x) * SPEED;
      y += Integer.compare(player.getY(), y) * SPEED;
